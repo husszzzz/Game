@@ -1,0 +1,50 @@
+name: Build iOS IPA (Godot 4)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Godot Headless
+        run: |
+          GODOT_VERSION="4.3"
+          curl -L -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip godot.zip
+          mv Godot.app /Applications/Godot.app
+          mkdir -p ~/bin
+          ln -s /Applications/Godot.app/Contents/MacOS/Godot ~/bin/godot
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Export iOS Project
+        run: |
+          mkdir -p build/ios
+          godot --headless --export-release "iOS" build/ios/Game.xcodeproj
+
+      - name: Build Xcode Archive & Package IPA
+        run: |
+          cd build/ios
+          xcodebuild archive \
+            -project Game.xcodeproj \
+            -scheme Game \
+            -configuration Release \
+            -archivePath Game.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+          mkdir -p Payload
+          cp -r Game.xcarchive/Products/Applications/Game.app Payload/
+          zip -r Game_Unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-Game-IPA
+          path: build/ios/Game_Unsigned.ipa
