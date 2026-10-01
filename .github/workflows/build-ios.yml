@@ -12,15 +12,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Godot Headless
+      - name: Setup Godot & iOS Export Templates
         run: |
           GODOT_VERSION="4.3"
+          # تحميل وتثبيت محرك Godot
           curl -L -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
           unzip godot.zip
           mv Godot.app /Applications/Godot.app
           mkdir -p ~/bin
           ln -s /Applications/Godot.app/Contents/MacOS/Godot ~/bin/godot
           echo "$HOME/bin" >> $GITHUB_PATH
+
+          # تحميل وتثبيت قوالب التصدير الخاصة بـ iOS
+          curl -L -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip templates.tpz
+          TEMPLATES_DIR="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATES_DIR"
+          cp -r templates/* "$TEMPLATES_DIR/"
 
       - name: Export iOS Project
         run: |
